@@ -8,15 +8,9 @@ Transform your Ansible playbook output into beautiful console output
 - Compact, readable format
 - Role grouping to organize tasks by role
 
-## Before & after
-
-### Before (Default Ansible)
-
-...
-
-### After (Prettified)
-
-...
+| Before (Default Ansible) | After (Prettified) |
+|:-------------------------:|:------------------:|
+| ![Before](https://roots.io/app/uploads/ansible-output-default.png) | ![After](https://roots.io/app/uploads/ansible-output-prettify.png) |
 
 ## Quick Start
 

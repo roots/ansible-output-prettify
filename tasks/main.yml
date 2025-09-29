@@ -1,0 +1,202 @@
+---
+- name: Create callback plugins directory
+  file:
+    path: "{{ ansible_user_dir }}/.ansible/plugins/callback"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+  tags: [prettify]
+
+- name: Install prettify callback plugin
+  copy:
+    src: prettify.py
+    dest: "{{ ansible_user_dir }}/.ansible/plugins/callback/prettify.py"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  notify: Display prettify installation success
+  tags: [prettify]
+
+- name: Check if ansible.cfg exists in playbook directory
+  stat:
+    path: "{{ playbook_dir }}/ansible.cfg"
+  register: ansible_cfg_check
+  delegate_to: localhost
+  run_once: true
+  tags: [prettify]
+
+- name: Check if ansible.cfg exists in current directory
+  stat:
+    path: "./ansible.cfg"
+  register: local_ansible_cfg_check
+  delegate_to: localhost
+  run_once: true
+  tags: [prettify]
+
+- name: Check if prettify is already configured
+  lineinfile:
+    path: "{{ ansible_cfg_check.stat.exists | ternary(playbook_dir + '/ansible.cfg', './ansible.cfg') }}"
+    regexp: '^stdout_callback\s*=\s*prettify'
+    state: absent
+  check_mode: yes
+  register: prettify_already_configured
+  delegate_to: localhost
+  run_once: true
+  when: ansible_cfg_check.stat.exists or local_ansible_cfg_check.stat.exists
+  tags: [prettify]
+
+- name: Offer to configure ansible.cfg automatically
+  pause:
+    prompt: |
+
+      🎨 Ansible Output Prettify plugin installed successfully!
+
+      Would you like to automatically configure ansible.cfg for beautiful output?
+      This will add/update the stdout_callback setting in your ansible.cfg file.
+
+      Press Enter to auto-configure, or Ctrl+C to configure manually.
+  register: auto_configure_response
+  delegate_to: localhost
+  run_once: true
+  when:
+    - prettify_auto_configure | default(true)
+    - ansible_cfg_check.stat.exists or local_ansible_cfg_check.stat.exists
+    - prettify_already_configured is defined
+    - not prettify_already_configured.found
+  tags: [prettify]
+
+- name: Auto-configure existing ansible.cfg
+  lineinfile:
+    path: "{{ ansible_cfg_check.stat.exists | ternary(playbook_dir + '/ansible.cfg', './ansible.cfg') }}"
+    regexp: '^stdout_callback\s*='
+    line: 'stdout_callback = prettify'
+    insertafter: '^\[defaults\]'
+    backup: yes
+  delegate_to: localhost
+  run_once: true
+  when:
+    - prettify_auto_configure | default(true)
+    - ansible_cfg_check.stat.exists or local_ansible_cfg_check.stat.exists
+    - auto_configure_response is defined
+  tags: [prettify]
+
+- name: Auto-configure callback_plugins in ansible.cfg
+  lineinfile:
+    path: "{{ ansible_cfg_check.stat.exists | ternary(playbook_dir + '/ansible.cfg', './ansible.cfg') }}"
+    regexp: '^callback_plugins\s*='
+    line: 'callback_plugins = ~/.ansible/plugins/callback'
+    insertafter: '^stdout_callback = prettify'
+    backup: yes
+  delegate_to: localhost
+  run_once: true
+  when:
+    - prettify_auto_configure | default(true)
+    - ansible_cfg_check.stat.exists or local_ansible_cfg_check.stat.exists
+    - auto_configure_response is defined
+  tags: [prettify]
+
+- name: Create ansible.cfg if none exists
+  copy:
+    content: |
+      [defaults]
+      stdout_callback = prettify
+      callback_plugins = ~/.ansible/plugins/callback
+      force_color = True
+    dest: "./ansible.cfg"
+    mode: '0644'
+  delegate_to: localhost
+  run_once: true
+  when:
+    - prettify_auto_configure | default(true)
+    - not ansible_cfg_check.stat.exists
+    - not local_ansible_cfg_check.stat.exists
+    - auto_configure_response is defined or (ansible_cfg_check.stat.exists == false and local_ansible_cfg_check.stat.exists == false)
+  tags: [prettify]
+
+- name: Display manual configuration instructions
+  debug:
+    msg: |
+      🎨 Ansible Output Prettify installed successfully!
+
+      To enable beautiful output, choose one of these options:
+
+      📝 Option 1: Add to your ansible.cfg file
+      [defaults]
+      stdout_callback = prettify
+      callback_plugins = ~/.ansible/plugins/callback
+
+      🌍 Option 2: Set environment variable
+      export ANSIBLE_STDOUT_CALLBACK=prettify
+
+      ⚡ Option 3: Use command line flag
+      ansible-playbook -e ANSIBLE_STDOUT_CALLBACK=prettify your-playbook.yml
+
+      💡 Pro tip: Add 'force_color = True' to ansible.cfg for best results!
+
+      Then run your playbooks as normal for beautiful Laravel Artisan-style output! ✨
+  delegate_to: localhost
+  run_once: true
+  when: not (prettify_auto_configure | default(true))
+  tags: [prettify]
+
+- name: Display already configured message
+  debug:
+    msg: |
+      ✅ Ansible Output Prettify is already configured in your ansible.cfg!
+
+      Your ansible.cfg already has 'stdout_callback = prettify' configured.
+      Run your playbooks as normal for beautiful Laravel Artisan-style output! ✨
+  delegate_to: localhost
+  run_once: true
+  when:
+    - prettify_already_configured is defined
+    - prettify_already_configured.found
+  tags: [prettify]
+
+- name: Validate prettify plugin installation
+  stat:
+    path: "{{ ansible_user_dir }}/.ansible/plugins/callback/prettify.py"
+  register: prettify_plugin_check
+  delegate_to: localhost
+  run_once: true
+  tags: [prettify, validate]
+
+- name: Test prettify plugin syntax
+  python:
+    code: |
+      import sys
+      sys.path.insert(0, "{{ ansible_user_dir }}/.ansible/plugins/callback")
+      try:
+          import prettify
+          print("✅ Plugin syntax is valid")
+      except ImportError as e:
+          print(f"❌ Plugin import failed: {e}")
+          sys.exit(1)
+      except SyntaxError as e:
+          print(f"❌ Plugin has syntax errors: {e}")
+          sys.exit(1)
+  register: syntax_check
+  delegate_to: localhost
+  run_once: true
+  when: prettify_plugin_check.stat.exists
+  failed_when: syntax_check.rc != 0
+  tags: [prettify, validate]
+
+- name: Display validation results
+  debug:
+    msg: |
+      🔍 Installation Validation Results:
+
+      Plugin file: {{ prettify_plugin_check.stat.exists | ternary('✅ Found', '❌ Missing') }}
+      Syntax check: {{ syntax_check.stdout if syntax_check is defined else 'Skipped' }}
+
+      {% if prettify_plugin_check.stat.exists and syntax_check.rc == 0 %}
+      🎉 Ansible Output Prettify is ready to use!
+      {% else %}
+      ⚠️  There may be an issue with the installation.
+      {% endif %}
+  delegate_to: localhost
+  run_once: true
+  when: prettify_plugin_check is defined
+  tags: [prettify, validate]

@@ -1,0 +1,28 @@
+# ansible-output-prettify default variables
+
+# Enable/disable the prettify plugin
+prettify_enabled: true
+
+# Output style configuration
+prettify_show_task_path: true
+prettify_show_timing: true
+prettify_show_timestamps: false
+prettify_show_host: true
+prettify_compact_output: false
+
+# Colors and symbols
+prettify_colors:
+  success: "green"
+  failed: "red"
+  changed: "yellow"
+  skipped: "cyan"
+  unreachable: "bright red"
+  info: "blue"
+
+prettify_symbols:
+  success: "✓"
+  failed: "✗"
+  changed: "⚡"
+  skipped: "→"
+  unreachable: "⚠"
+  running: "●"

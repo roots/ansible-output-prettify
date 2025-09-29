@@ -1,0 +1,7 @@
+---
+- name: Display prettify installation success
+  debug:
+    msg: |
+      ✨ Prettify callback plugin installed to ~/.ansible/plugins/callback/prettify.py
+
+      Ready to beautify your Ansible output!

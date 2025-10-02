@@ -1,7 +1,7 @@
 ---
 - name: Create callback plugins directory
   file:
-    path: "{{ ansible_user_dir }}/.ansible/plugins/callback"
+    path: "{{ ansible_user_dir | default(ansible_env.HOME + '/.ansible') }}/plugins/callback"
     state: directory
     mode: '0755'
   delegate_to: localhost
@@ -10,7 +10,7 @@
 - name: Install prettify callback plugin
   copy:
     src: prettify.py
-    dest: "{{ ansible_user_dir }}/.ansible/plugins/callback/prettify.py"
+    dest: "{{ ansible_user_dir | default(ansible_env.HOME + '/.ansible') }}/plugins/callback/prettify.py"
     mode: '0644'
   delegate_to: localhost
   run_once: true

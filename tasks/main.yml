@@ -1,4 +1,10 @@
 ---
+- name: Gather facts if not available
+  setup:
+  when: ansible_env is not defined
+  delegate_to: localhost
+  run_once: true
+
 - name: Create callback plugins directory
   file:
     path: "{{ ansible_user_dir | default(ansible_env.HOME + '/.ansible') }}/plugins/callback"
